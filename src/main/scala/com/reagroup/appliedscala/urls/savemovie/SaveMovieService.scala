@@ -10,8 +10,11 @@ class SaveMovieService(saveMovie: ValidatedMovie => IO[MovieId]) {
   /**
     * Before saving a `NewMovieRequest`, we want to validate the request in order to get a `ValidatedMovie`.
     * Complete `NewMovieValidator`, then use it here before calling `saveMovie`.
+    * What on earth is traverse
     */
-  def save(newMovieReq: NewMovieRequest): IO[ValidatedNel[MovieValidationError, MovieId]] =
-    ???
+  def save(newMovieReq: NewMovieRequest): IO[ValidatedNel[MovieValidationError, MovieId]] = {
+    val validatedMovie = NewMovieValidator.validate(newMovieReq)
+    validatedMovie.traverse(saveMovie)
+  }
 
 }

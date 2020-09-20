@@ -22,6 +22,7 @@ class AppRuntime(config: Config, httpClient: Client[IO], contextShift: ContextSh
     * This is the repository that talks to Postgresql
     */
   private val pgsqlRepo = PostgresqlRepository(config.databaseConfig, contextShift)
+  private val metascoreRepo = new Http4sMetascoreRepository(httpClient, config.omdbApiKey)
 
   /**
     * This is where we instantiate our `Service` and `Controller` for each endpoint.
@@ -32,9 +33,32 @@ class AppRuntime(config: Config, httpClient: Client[IO], contextShift: ContextSh
     new FetchAllMoviesController(fetchAllMoviesService.fetchAll)
   }
 
+  private val fetchMovieController: FetchMovieController = {
+    val fetchMovieService: FetchMovieService = new FetchMovieService(pgsqlRepo.fetchMovie)
+    new FetchMovieController(fetchMovieService.fetch)
+  }
+
+  private val fetchEnrichedMovieController: FetchEnrichedMovieController = {
+    val fetchEnrichedMovieService = new FetchEnrichedMovieService(pgsqlRepo.fetchMovie, metascoreRepo.apply)
+    new FetchEnrichedMovieController(fetchEnrichedMovieService.fetch)
+  }
+
+  private val saveMovieController: SaveMovieController = {
+    val saveMovieService = new SaveMovieService(pgsqlRepo.saveMovie)
+    new SaveMovieController(saveMovieService.save)
+  }
+
+  private val saveReviewController: SaveReviewController = {
+    val saveReviewService = new SaveReviewService(pgsqlRepo.saveReview, pgsqlRepo.fetchMovie)
+    new SaveReviewController(saveReviewService.save)
+  }
+
   private val appRoutes = new AppRoutes(
     fetchAllMoviesHandler = fetchAllMoviesController.fetchAll,
-    saveMovieHandler = _ => IO(Response[IO](status = Status.NotImplemented))
+    fetchMovieHandler = (movieId: Long) => fetchMovieController.fetch(movieId),
+    fetchEnrichedMovieHandler = (movieId: Long) => fetchEnrichedMovieController.fetch(movieId),
+    saveMovieHandler = (request: Request[IO]) => saveMovieController.save(request),
+    saveReviewHandler = (movieId: Long, request: Request[IO]) => saveReviewController.save(movieId, request)
   )
 
   /*

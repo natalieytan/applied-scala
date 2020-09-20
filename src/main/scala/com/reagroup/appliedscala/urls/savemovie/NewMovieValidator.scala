@@ -11,8 +11,14 @@ object NewMovieValidator {
     *
     * Hint: `Validated` has an Applicative instance.
     */
-  def validate(newMovie: NewMovieRequest): ValidatedNel[MovieValidationError, ValidatedMovie] =
-    ???
+  def validate(newMovie: NewMovieRequest): ValidatedNel[MovieValidationError, ValidatedMovie] = {
+    val validatedNameNel = validateMovieName(newMovie.name)
+    val validatedSynopsisNel = validateMovieSynopsis(newMovie.synopsis)
+    (validatedNameNel, validatedSynopsisNel)
+      .mapN(
+        (validatedName, validatedSynposis) => ValidatedMovie(validatedName, validatedSynposis)
+      )
+  }
 
   /**
     * If `name` is empty, return an `InvalidNel` containing `MovieNameTooShort`,
@@ -21,7 +27,11 @@ object NewMovieValidator {
     * Hint: You can use `.isEmpty` or `.nonEmpty` on `String`
     */
   private def validateMovieName(name: String): ValidatedNel[MovieValidationError, String] =
-    ???
+    if (name.isEmpty) {
+      MovieNameTooShort.invalidNel
+    } else {
+      name.validNel
+    }
 
   /**
     * If `synopsis` is empty, return an `InvalidNel` containing `MovieSynopsisTooShort`,
@@ -30,6 +40,10 @@ object NewMovieValidator {
     * Hint: You can use `.isEmpty` or `.nonEmpty` on `String`
     */
   private def validateMovieSynopsis(synopsis: String): ValidatedNel[MovieValidationError, String] =
-    ???
+    if (synopsis.isEmpty) {
+      MovieSynopsisTooShort.invalidNel
+    } else {
+      synopsis.validNel
+    }
 
 }

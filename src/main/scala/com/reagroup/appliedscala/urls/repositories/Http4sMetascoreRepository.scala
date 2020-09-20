@@ -4,8 +4,8 @@ import cats.effect.IO
 import com.reagroup.appliedscala.urls.fetchenrichedmovie.Metascore
 import io.circe.parser.decode
 import org.http4s._
-import org.http4s.implicits._
 import org.http4s.client.Client
+import org.http4s.implicits._
 
 class Http4sMetascoreRepository(httpClient: Client[IO], apiKey: String) {
 
@@ -18,7 +18,13 @@ class Http4sMetascoreRepository(httpClient: Client[IO], apiKey: String) {
       .withQueryParam("apikey", apiKey)
       .withQueryParam("t", movieName)
     val ioStr: IO[String] = httpClient.expect[String](omdbURI)
-    ???
+    ioStr.attempt.map(maybeJson => maybeJson match {
+      case Left(_) => None
+      case Right(maybeJson) => Some(decode[Metascore](maybeJson) match {
+        case Left(_) => None
+        case Right(value) => Some(value)
+      }).flatten
+    })
   }
 
 }

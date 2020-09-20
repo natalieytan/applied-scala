@@ -8,7 +8,11 @@ import org.http4s.dsl.Http4sDsl
   * The `AppRoutes` class defines the routes for our app.
   */
 class AppRoutes(fetchAllMoviesHandler: IO[Response[IO]],
-                saveMovieHandler: Request[IO] => IO[Response[IO]]) extends Http4sDsl[IO] {
+                fetchMovieHandler: Long => IO[Response[IO]],
+                fetchEnrichedMovieHandler: Long => IO[Response[IO]],
+                saveMovieHandler: Request[IO] => IO[Response[IO]],
+                saveReviewHandler: (Long, Request[IO]) => IO[Response[IO]]
+               ) extends Http4sDsl[IO] {
 
   /**
     * This Matcher is used to find a query parameter called `enriched` that can be set to `true` or `false`
@@ -19,9 +23,14 @@ class AppRoutes(fetchAllMoviesHandler: IO[Response[IO]],
 
   val openRoutes: HttpRoutes[IO] = HttpRoutes.of {
     case GET -> Root / "movies" => fetchAllMoviesHandler
-    case GET -> Root / "movies" / LongVar(id) => ???
+    case GET -> Root / "movies" / LongVar(id) :? OptionalEnrichedMatcher(optEnriched) =>
+      if(optEnriched.contains(true)) {
+        fetchEnrichedMovieHandler(id)
+      } else {
+        fetchMovieHandler(id)
+      }
     case req @ POST -> Root / "movies" => saveMovieHandler(req)
-    case req @ POST -> Root / "movies" / LongVar(id) / "reviews" => ???
+    case req @ POST -> Root / "movies" / LongVar(id) / "reviews" => saveReviewHandler(id, req)
   }
 
 }
