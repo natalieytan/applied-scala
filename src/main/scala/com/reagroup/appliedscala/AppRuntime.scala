@@ -55,10 +55,10 @@ class AppRuntime(config: Config, httpClient: Client[IO], contextShift: ContextSh
 
   private val appRoutes = new AppRoutes(
     fetchAllMoviesHandler = fetchAllMoviesController.fetchAll,
-    fetchMovieHandler = (movieId: Long) => fetchMovieController.fetch(movieId),
-    fetchEnrichedMovieHandler = (movieId: Long) => fetchEnrichedMovieController.fetch(movieId),
-    saveMovieHandler = (request: Request[IO]) => saveMovieController.save(request),
-    saveReviewHandler = (movieId: Long, request: Request[IO]) => saveReviewController.save(movieId, request)
+    fetchMovieHandler = fetchMovieController.fetch,
+    fetchEnrichedMovieHandler = fetchEnrichedMovieController.fetch,
+    saveMovieHandler = saveMovieController.save,
+    saveReviewHandler = saveReviewController.save
   )
 
   /*
