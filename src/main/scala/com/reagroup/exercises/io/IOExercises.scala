@@ -20,9 +20,7 @@ object IOExercises {
     *
     * Hint: You want to look for a function in IO with the type signature A => IO[A]
     */
-  def immediatelyExecutingIO(): IO[Int] =
-    ???
-
+  def immediatelyExecutingIO(): IO[Int] = IO.pure(43)
   /**
     * Create an IO which when executed logs “hello world” (using `logger`)
     *
@@ -34,8 +32,7 @@ object IOExercises {
     * Note: By "injecting" `logger` as a dependency to this function, we are able to use a test logger in our unit test
     * instead of relying on a mocking framework.
     */
-  def helloWorld(logger: String => Unit): IO[Unit] =
-    ???
+  def helloWorld(logger: String => Unit): IO[Unit] = IO(logger("hello world"))
 
   /**
     * Difference between `IO.apply` and `IO.pure`:
@@ -57,8 +54,7 @@ object IOExercises {
     *
     * Hint: https://typelevel.org/cats-effect/datatypes/io.html#raiseerror
     */
-  def alwaysFailingTask(): IO[Unit] =
-    ???
+  def alwaysFailingTask(): IO[Unit] = IO.raiseError(new Exception("Boom"))
 
   /**
     * This is a data type that represents an exception in our program.
@@ -71,9 +67,13 @@ object IOExercises {
     *
     * If `msg` is not empty, log out the message using the `logger`
     */
-  def logMessageOrFailIfEmpty(msg: String, logger: String => Unit): IO[Unit] =
-    ???
-
+  def logMessageOrFailIfEmpty(msg: String, logger: String => Unit): IO[Unit] = {
+    if(msg.isEmpty) {
+      IO.raiseError(AppException("Log must not be empty"))
+    } else {
+      IO(logger(msg))
+    }
+  }
   /**
     * We're going to work with temperature next. We start off by creating tiny types for `Fahrenheit` and `Celsius`.
     * By doing this, we can differentiate between the two easily.
@@ -91,8 +91,9 @@ object IOExercises {
     * Create an IO which gets the current temperature in Celsius and if successful, converts it to Fahrenheit
     * using `cToF` defined above.
     */
-  def getCurrentTempInF(getCurrentTemp: IO[Celsius]): IO[Fahrenheit] =
-    ???
+  def getCurrentTempInF(getCurrentTemp: IO[Celsius]): IO[Fahrenheit] = {
+    getCurrentTemp.map(celsius => cToF(celsius))
+  }
 
   /**
     * Suppose the Celsius to Fahrenheit conversion is complex so we have decided to refactor it out to a remote
@@ -105,7 +106,7 @@ object IOExercises {
     * without the need for a mocking framework.
     */
   def getCurrentTempInFAgain(getCurrentTemp: IO[Celsius], converter: Celsius => IO[Fahrenheit]): IO[Fahrenheit] =
-    ???
+    getCurrentTemp.flatMap(celsius => converter(celsius))
 
 
   /**
@@ -123,7 +124,10 @@ object IOExercises {
     * Hint: https://typelevel.org/cats-effect/datatypes/io.html#attempt
     */
   def showCurrentTempInF(currentTemp: IO[Celsius], converter: Celsius => IO[Fahrenheit]): IO[String] =
-    ???
+    currentTemp.map(celsius => converter(celsius).attempt.unsafeRunSync() match {
+      case Right(Fahrenheit(value)) => s"The temperature is $value"
+      case Left(error: Throwable) => error.getMessage
+    })
 
   /**
     * `UsernameError` and `Username` are tiny types we are going to use for the next exercise.
@@ -142,11 +146,15 @@ object IOExercises {
     * Use `mkUsername` to create a `Username` and if successful print the username, otherwise fail with a UsernameError.
     */
   def mkUsernameThenPrint(username: String, logger: String => Unit): IO[Unit] =
-    ???
+    mkUsername(username) match {
+      case Left(usernameError) => IO.raiseError(usernameError)
+      case Right(Username(safeUsername)) => IO(logger(safeUsername))
+    }
 
 
   /**
     * What is the output of the following program?
+    * It just logs `executing step 3` as that is the only thing returned
     * Is it different to what you expected?
     *
     * Change it so that it outputs the following when run:
@@ -154,10 +162,8 @@ object IOExercises {
     * > executing step 2
     * > executing step 3
     */
-  def explain(logger: String => Unit): IO[Unit] = {
-    IO(logger("executing step 1"))
-    IO(logger("executing step 2"))
-    IO(logger("executing step 3"))
+  def explain(logger: String => Unit): IO[(Unit, Unit, Unit)] = {
+    IO(logger("executing step 1"), logger("executing step 2"), logger("executing step 3"))
   }
 
   /**
@@ -166,7 +172,6 @@ object IOExercises {
     *
     * Hint: https://typelevel.org/cats-effect/datatypes/io.html#unsaferunsync
     */
-  def execute[A](io: IO[A]): A =
-    ???
+  def execute[A](io: IO[A]): A = io.unsafeRunSync()
 
 }
