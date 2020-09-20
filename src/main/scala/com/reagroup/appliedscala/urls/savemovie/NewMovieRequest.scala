@@ -18,4 +18,10 @@ object NewMovieRequest {
     * Hint: The keys in the JSON are named exactly the same as the fields in `NewMovieRequest`.
     */
 
+  implicit val newMovieRequestDecoder: Decoder[NewMovieRequest] = cursor => {
+    for {
+      name <- cursor.get[String]("name")
+      synopsis <- cursor.get[String]("synopsis")
+    } yield NewMovieRequest(name, synopsis)
+  }
 }

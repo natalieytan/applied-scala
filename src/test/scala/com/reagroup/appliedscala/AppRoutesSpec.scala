@@ -23,9 +23,9 @@ class AppRoutesSpec extends Specification with Http4sDsl[IO] with Http4sMatchers
   private val testAppRoutes = new AppRoutes(
     fetchAllMoviesHandler = fetchAllMovies,
     saveMovieHandler = saveMovie,
-//    fetchMovieHandler = fetchMovie,
-//    fetchEnrichedMovieHandler = fetchEnrichedMovie,
-//    saveReviewHandler = saveReview
+    fetchMovieHandler = fetchMovie,
+    fetchEnrichedMovieHandler = fetchEnrichedMovie,
+    saveReviewHandler = saveReview
   )
 
   /*

@@ -12,7 +12,9 @@ object NewReviewValidator {
     * Hint: `Validated` has an Applicative instance.
     */
   def validate(review: NewReviewRequest): ValidatedNel[ReviewValidationError, ValidatedReview] =
-    ???
+    (validateAuthor(review.author), validateComment(review.comment)).mapN(
+      (review, comment) => ValidatedReview(review, comment)
+    )
 
   /**
     * If `author` is empty, return an `InvalidNel` containing `ReviewAuthorTooShort`,
@@ -21,7 +23,11 @@ object NewReviewValidator {
     * Hint: You can use `.isEmpty` or `.nonEmpty` on `String`
     */
   private def validateAuthor(author: String): ValidatedNel[ReviewValidationError, String] =
-    ???
+    if (author.isEmpty) {
+      ReviewAuthorTooShort.invalidNel
+    } else {
+      author.validNel
+    }
 
   /**
     * If `comment` is empty, return an `InvalidNel` containing `ReviewCommentTooShort`,
@@ -30,6 +36,10 @@ object NewReviewValidator {
     * Hint: You can use `.isEmpty` or `.nonEmpty` on `String`
     */
   private def validateComment(comment: String): ValidatedNel[ReviewValidationError, String] =
-    ???
+    if(comment.isEmpty) {
+      ReviewCommentTooShort.invalidNel
+    } else {
+      comment.validNel
+    }
 
 }
