@@ -1,7 +1,6 @@
 package com.reagroup.exercises.validated
 
-import cats.data.Validated
-import cats.data.ValidatedNel
+import cats.data.{NonEmptyList, Validated, ValidatedNel}
 import cats.implicits._
 
 /**
@@ -38,7 +37,11 @@ object ValidationExercises {
     * Hint: Use the `.invalidNel` and `.validNel` combinators
     */
   def nameValidation(name: String, label: String): ValidatedNel[ValidationError, String] =
-    ???
+    if (name.isEmpty) {
+      NameIsEmpty(label).invalidNel
+    } else {
+      name.validNel
+    }
 
   /**
     * If the `password` does not contain a numeric character, return a `PasswordTooWeak`.
@@ -48,7 +51,11 @@ object ValidationExercises {
     * Hint: Use `password.exists(Character.isDigit)`
     */
   def passwordStrengthValidation(password: String): ValidatedNel[ValidationError, String] =
-    ???
+    if (password.exists(Character.isDigit)) {
+      password.validNel
+    } else {
+      PasswordTooWeak.invalidNel
+    }
 
   /**
     * If the `password` length is not greater than 8 characters, return `PasswordTooShort`.
@@ -56,32 +63,48 @@ object ValidationExercises {
     * Otherwise, return the `password`.
     */
   def passwordLengthValidation(password: String): ValidatedNel[ValidationError, String] =
-    ???
+    if (password.length > 8) {
+      password.validNel
+    } else {
+      PasswordTooShort.invalidNel
+    }
 
   /**
     * Compose `passwordStrengthValidation` and `passwordLengthValidation` using Applicative `productR`
     * to construct a larger `passwordValidation`.
     */
   def passwordValidation(password: String): ValidatedNel[ValidationError, String] =
-    ???
+    passwordStrengthValidation(password).productR(passwordLengthValidation(password))
 
   /**
     * Compose `nameValidation` and `passwordValidation` to construct a function to `validatePerson`.
     *
     * Take a look at `.mapN` for this one, to map a tuple of ValidatedNels to a singular ValidatedNel
+    * Note: I had to make the Nels in a specific order for the error test to be happy
     */
-  def validatePerson(firstName: String, lastName: String, password: String): ValidatedNel[ValidationError, Person] =
-    ???
+  def validatePerson(firstName: String, lastName: String, password: String): ValidatedNel[ValidationError, Person] = {
+    val validatedFirstNameNel: ValidatedNel[ValidationError, String] = nameValidation(firstName, "firstName")
+    val validatedLastNameNel = nameValidation(lastName, "lastName")
+    val validatedPasswordNel: ValidatedNel[ValidationError, String] = passwordStrengthValidation(password)
+      .productR(passwordLengthValidation(password))
+    (validatedFirstNameNel, validatedLastNameNel, validatedPasswordNel)
+      .mapN(
+        (validatedFirstName, validatedLastName, validatedPassword) => Person(validatedFirstName, validatedLastName, validatedPassword)
+      )
+  }
 
 
   /**
     * Given a list of `(firstName, lastName, password)`, return either a `List[Person]` or
     * all the `ValidationErrors` if there are any.
+    * Found the cool method .sequence, but how does it work under the hood? I was having a headache doing it without it
     */
   type FirstName = String
   type LastName = String
   type Password = String
-  def validatePeople(inputs: List[(FirstName, LastName, Password)]): ValidatedNel[ValidationError, List[Person]] =
-    ???
 
+  def validatePeople(inputs: List[(FirstName, LastName, Password)]): ValidatedNel[ValidationError, List[Person]] = {
+    val validatedInputs: List[ValidatedNel[ValidationError, Person]] = inputs.map(input => validatePerson(input._1, input._2, input._3))
+    validatedInputs.sequence
+  }
 }
