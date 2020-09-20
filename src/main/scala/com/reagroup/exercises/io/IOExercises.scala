@@ -162,9 +162,13 @@ object IOExercises {
     * > executing step 2
     * > executing step 3
     */
-  def explain(logger: String => Unit): IO[(Unit, Unit, Unit)] = {
-    IO(logger("executing step 1"), logger("executing step 2"), logger("executing step 3"))
-  }
+
+  def explain(logger: String => Unit): IO[Unit] =
+    for {
+      _ <- IO(logger("executing step 1"))
+      _ <- IO(logger("executing step 2"))
+      _ <- IO(logger("executing step 3"))
+    } yield ()
 
   /**
     * Finally, we want to learn how to execute an IO. We are not going to need to do this when writing a REST API however,
