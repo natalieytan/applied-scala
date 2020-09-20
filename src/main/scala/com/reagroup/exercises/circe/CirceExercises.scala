@@ -27,14 +27,17 @@ object CirceExercises {
     * Hint: `parser` is already in scope (imported through `io.circe._`)
     *
     * Why is the return type an `Either`?
+    * Because the string can be an invalid JSON and unable to be pared
     */
   def strToJson(str: String): Either[ParsingFailure, Json] = {
-    ???
+    parser.parse(str)
   }
 
   /**
     * Try make a syntax error in the following Json document and compile.
     * What happens?
+    * I get a compile error
+    * Qn: Why import literal._ in the middle of this file?
     */
   val validJson: Json = {
     import io.circe.literal._
@@ -72,13 +75,22 @@ object CirceExercises {
       * - https://www.parsonsmatt.org/2017/01/07/how_do_type_classes_differ_from_interfaces.html
       */
     implicit val personEncoder: Encoder[Person] = (p: Person) => {
-      ???
+      Json.obj(
+        ("name", Json.fromString(p.name)),
+        ("age", Json.fromInt(p.age))
+      )
     }
 
     /**
       * Sometimes you might want several encoders for the same type.
       *
       * Why can't we define this as implicit as well? How would Scala know which one to pick?
+      *
+      * Error:(106, 12) ambiguous implicit values:
+      * both value personEncoder in object Person of type io.circe.Encoder[com.reagroup.exercises.circe.CirceExercises.Person]
+      * and value differentPersonEncoder in object Person of type io.circe.Encoder[com.reagroup.exercises.circe.CirceExercises.Person]
+      * match expected type io.circe.Encoder[com.reagroup.exercises.circe.CirceExercises.Person]
+      *     person.asJson
       */
     val differentPersonEncoder: Encoder[Person] = (p: Person) => {
       Json.obj(
@@ -104,7 +116,7 @@ object CirceExercises {
     * Use `differentPersonEncoder` explicitly to encode the person
     */
   def encodePersonDifferently(person: Person): Json = {
-    person.asJson(???)
+    person.asJson(Person.differentPersonEncoder)
   }
 
   /**
@@ -122,7 +134,7 @@ object CirceExercises {
   def encodePersonSemiAuto(person: Person): Json = {
     import io.circe.generic.semiauto._
 
-    implicit val personEncoder: Encoder[Person] = ???
+    implicit val personEncoder: Encoder[Person] = deriveEncoder[Person]
     person.asJson
   }
 
@@ -134,6 +146,7 @@ object CirceExercises {
     * Remember: `Result[A]` is an alias for `Either[DecodingFailure, A]`
     *
     * Question: Why is the return type an `Either`?
+    * Decoding can fail. The JSON may be invalid or may not be the structure we want
     *
     * Construct a `Decoder` instance for `Person`, that uses the `HCursor` to
     * navigate through the `Json`.
@@ -158,12 +171,24 @@ object CirceExercises {
   def decodePerson(json: Json): Either[DecodingFailure, Person] = {
     import cats.implicits._
 
-    implicit val personDecoder: Decoder[Person] = new Decoder[Person] {
-      override def apply(cursor: HCursor): Result[Person] = ???
-    }
+    implicit val personDecoder: Decoder[Person] = (cursor: HCursor) => for {
+      name <- cursor.downField("name").as[String]
+      age <- cursor.downField("age").as[Int]
+    } yield Person(name, age)
+
+
     // note: a lot of boilerplate can be removed. Try pressing alt-enter with your
     // cursor over "new Decoder[Person]" above. This works because Decoder is a trait with
     // a single abstract method.
+
+    // Boilerplate:
+    //    implicit val personDecoder: Decoder[Person] = new Decoder[Person] {
+    //      override def apply(cursor: HCursor): Result[Person] =
+    //        for {
+    //          name <- cursor.downField("name").as[String]
+    //          age <- cursor.downField("age").as[Int]
+    //        } yield Person(name, age)
+    //    }
 
     // This says "Turn this Json to a Person"
     json.as[Person]
@@ -177,7 +202,7 @@ object CirceExercises {
   def decodePersonSemiAuto(json: Json): Either[DecodingFailure, Person] = {
     import io.circe.generic.semiauto._
 
-    implicit val personDecoder: Decoder[Person] = ???
+    implicit val personDecoder: Decoder[Person] = deriveDecoder[Person]
 
     json.as[Person]
   }
@@ -186,13 +211,15 @@ object CirceExercises {
     * Parse and then decode
     *
     * Hint: Use `parser.decode`, which does both at the same time.
+    * Question: How come this is Error and not DecodingFailure
     */
   def strToPerson(str: String): Either[Error, Person] = {
     import io.circe.generic.semiauto._
 
-    implicit val personDecoder: Decoder[Person] = ???
+    implicit val personDecoder: Decoder[Person] = deriveDecoder[Person]
 
-    ???
+    // alternatively: parser.decode[Person](str)
+    parser.parse(str).flatMap(_.as[Person])
   }
 
 }
